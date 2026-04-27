@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 
 import pymunk
@@ -12,14 +13,22 @@ import tcod.tileset
 from ball import SoftBall
 from drag import Dragger
 
-WIDTH, HEIGHT = 60, 40
-# Square 16x16 cells so circles look round (no aspect compensation needed).
+WIDTH, HEIGHT = 120, 80
+# Square cells so circles look round (no aspect compensation needed).
 FONT_PATH = "/System/Library/Fonts/Monaco.ttf"
-CELL = 16
+CELL = 12
 
 PHYSICS_DT = 1.0 / 240.0
-GLYPH = "█"
-BALL_COLOR = (255, 200, 0)
+
+# Concentric "shells" by normalized distance from center: (max r/R, glyph, color).
+# Inner shells get bright/heavy ASCII; outer shells get dim/sparse ASCII so the
+# rim looks soft and translucent.
+SHELLS: list[tuple[float, str, tuple[int, int, int]]] = [
+    (0.45, "#", (255, 230, 140)),
+    (0.70, "o", (220, 175, 80)),
+    (0.88, "*", (160, 115, 45)),
+    (1.10, ".", (95, 65, 25)),
+]
 
 
 def make_walls(space: pymunk.Space, w: int, h: int) -> None:
@@ -56,10 +65,20 @@ def draw_ball(console: tcod.console.Console, ball: SoftBall) -> None:
     x1 = min(WIDTH - 1, int(max(xs)) + 1)
     y0 = max(0, int(min(ys)) - 1)
     y1 = min(HEIGHT - 1, int(max(ys)) + 1)
+
+    cx = ball.center.position.x
+    cy = ball.center.position.y
+    r = ball.radius
+
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
-            if point_in_polygon(x + 0.5, y + 0.5, verts):
-                console.print(x, y, GLYPH, fg=BALL_COLOR)
+            if not point_in_polygon(x + 0.5, y + 0.5, verts):
+                continue
+            d = math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r
+            for threshold, glyph, color in SHELLS:
+                if d <= threshold:
+                    console.print(x, y, glyph, fg=color)
+                    break
 
 
 def main() -> None:
@@ -68,8 +87,8 @@ def main() -> None:
     space.damping = 1.0
 
     make_walls(space, WIDTH, HEIGHT)
-    ball = SoftBall(space, WIDTH / 2, HEIGHT / 2, radius=5.0, n=18)
-    ball.kick(20.0, 13.0)
+    ball = SoftBall(space, WIDTH / 2, HEIGHT / 2, radius=10.0, n=24)
+    ball.kick(28.0, 18.0)
 
     drag = Dragger(space)
     console = tcod.console.Console(WIDTH, HEIGHT)
@@ -95,6 +114,7 @@ def main() -> None:
 
             accumulator += frame_dt
             while accumulator >= PHYSICS_DT:
+                ball.pre_step()
                 space.step(PHYSICS_DT)
                 accumulator -= PHYSICS_DT
 
