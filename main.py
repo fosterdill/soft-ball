@@ -86,6 +86,8 @@ def main() -> None:
         accumulator = 0.0
         while True:
             now = time.perf_counter()
+            # Cap dt to avoid the spiral of death after a long stall (debugger,
+            # tab-switch): we'd otherwise queue too many physics steps to catch up.
             accumulator += min(now - last, 0.1)
             last = now
             while accumulator >= PHYSICS_DT:

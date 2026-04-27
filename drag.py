@@ -8,14 +8,10 @@ from ball import SoftBall
 class Dragger:
     """Mouse drag via PivotJoint with capped force and bias.
 
-    Standard physics-engine drag: the joint pulls the target body toward the
-    mouse body, but max_force caps the impulse it can apply per step and
-    max_bias caps how fast it can correct positional error. Together these
-    make the latch-on smooth (no instant yank) and the follow snappy without
-    spazzing on fast mouse motion.
-
-    Throw on release is automatic — the target body keeps whatever velocity
-    the joint had been imparting.
+    max_force caps the per-step impulse so latch-on doesn't yank the body;
+    max_bias caps positional-error correction so fast mouse motion doesn't
+    make the body spaz. Throw on release is automatic — the body keeps
+    whatever velocity the joint was imparting.
     """
 
     def __init__(
@@ -37,14 +33,10 @@ class Dragger:
 
     def begin(self, ball: SoftBall, mx: float, my: float) -> None:
         self.mouse_body.position = mx, my
-        # Drag the center body, not a perimeter point. The anchor offset below
-        # keeps the cursor on the click point; using the center as the target
-        # means the whole ball tracks the cursor coherently instead of one rim
-        # point being yanked while the rest lags behind.
+        # Target the center (so the whole ball tracks coherently instead of one
+        # rim point being yanked) but anchor at the click offset (so the click
+        # point stays under the cursor — no snap to body center).
         self.target = ball.center
-        # Anchor the joint at the click offset in the target's local frame so
-        # the original click point on the body stays under the cursor (no snap
-        # to body center / rim).
         anchor = (mx - self.target.position.x, my - self.target.position.y)
         self.joint = pymunk.PivotJoint(
             self.mouse_body, self.target, (0, 0), anchor

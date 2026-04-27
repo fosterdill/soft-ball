@@ -7,6 +7,7 @@ Polygon = list[tuple[float, float]]
 
 
 def point_in_polygon(px: float, py: float, verts: Polygon) -> bool:
+    """Even-odd ray-cast inclusion test: cast +x ray, count edge crossings."""
     inside = False
     n = len(verts)
     j = n - 1

@@ -57,11 +57,9 @@ class SoftBall:
             space.add(body, shape)
             self.perimeter.append(body)
 
-        # Radial springs: each perimeter point ↔ center.
         for b in self.perimeter:
             self._add_spring(self.center, b, radius, radial_stiffness, radial_damping)
 
-        # Rim springs: each perimeter point ↔ next perimeter point.
         rim_rest = 2 * radius * math.sin(math.pi / n)
         for i in range(n):
             self._add_spring(
@@ -69,7 +67,7 @@ class SoftBall:
                 rim_rest, rim_stiffness, rim_damping,
             )
 
-        # Cross springs (across the diameter) — keeps the ball from collapsing
+        # Cross springs across the diameter — without these, the ball flattens
         # into a pancake when it slams into a wall.
         for i in range(n // 2):
             self._add_spring(
@@ -158,10 +156,9 @@ class SoftBall:
             b = self.perimeter[(i + 1) % n]
             ex = b.position.x - a.position.x
             ey = b.position.y - a.position.y
-            # Outward normal scaled by edge length: (ey, -ex) for CCW (winding>0).
-            # Pressure force on this edge = pressure * length * unit_normal,
-            # which equals pressure * (ey, -ex) since (ey, -ex) already has
-            # length=edge_len. Split half-and-half between the two endpoints.
+            # (ey, -ex) is the outward normal scaled by edge length (CCW winding),
+            # so pressure * (ey, -ex) is already pressure * length * unit_normal —
+            # no need to normalize. Split half-and-half between endpoints.
             fx = pressure * ey * winding * 0.5
             fy = -pressure * ex * winding * 0.5
             a.apply_force_at_local_point((fx, fy), (0, 0))
