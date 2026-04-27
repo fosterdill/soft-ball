@@ -57,6 +57,33 @@ def point_in_polygon(px: float, py: float, verts: list[tuple[float, float]]) -> 
     return inside
 
 
+def ray_polygon_distance(
+    cx: float, cy: float, ux: float, uy: float,
+    verts: list[tuple[float, float]],
+) -> float:
+    """Distance from (cx, cy) along unit direction (ux, uy) to polygon boundary.
+
+    Returns +inf if the ray misses (shouldn't happen if (cx, cy) is inside).
+    """
+    best = math.inf
+    n = len(verts)
+    for i in range(n):
+        x1, y1 = verts[i]
+        x2, y2 = verts[(i + 1) % n]
+        ex = x2 - x1
+        ey = y2 - y1
+        det = ex * uy - ey * ux
+        if abs(det) < 1e-12:
+            continue
+        wx = x1 - cx
+        wy = y1 - cy
+        t = (ex * wy - ey * wx) / det
+        s = (ux * wy - uy * wx) / det
+        if t > 0.0 and 0.0 <= s <= 1.0 and t < best:
+            best = t
+    return best
+
+
 def draw_ball(console: tcod.console.Console, ball: SoftBall) -> None:
     verts = ball.hull()
     xs = [v[0] for v in verts]
@@ -68,13 +95,21 @@ def draw_ball(console: tcod.console.Console, ball: SoftBall) -> None:
 
     cx = ball.center.position.x
     cy = ball.center.position.y
-    r = ball.radius
 
     for y in range(y0, y1 + 1):
         for x in range(x0, x1 + 1):
             if not point_in_polygon(x + 0.5, y + 0.5, verts):
                 continue
-            d = math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r
+            dx = x + 0.5 - cx
+            dy = y + 0.5 - cy
+            cell_r = math.hypot(dx, dy)
+            if cell_r < 1e-6:
+                d = 0.0
+            else:
+                edge_r = ray_polygon_distance(
+                    cx, cy, dx / cell_r, dy / cell_r, verts
+                )
+                d = min(cell_r / edge_r, 1.0) if math.isfinite(edge_r) else 1.0
             for threshold, glyph, color in SHELLS:
                 if d <= threshold:
                     console.print(x, y, glyph, fg=color)
