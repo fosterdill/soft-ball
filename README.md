@@ -1,5 +1,7 @@
 # soft-ball
 
+![demo](demo.gif)
+
 A bouncing soft-body ball rendered in the terminal with libtcod, simulated with
 pymunk. The ball is a ring of perimeter masses tied to a central mass with
 radial, rim, and cross springs, plus a gas-pressure term that pushes the
